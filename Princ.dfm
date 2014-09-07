@@ -23,9 +23,9 @@ object FmPrinc: TFmPrinc
   PixelsPerInch = 96
   TextHeight = 13
   object Gauge: TGauge
-    Left = 136
+    Left = 129
     Top = 8
-    Width = 599
+    Width = 530
     Height = 25
     Anchors = [akLeft, akTop, akRight]
     Progress = 54
@@ -44,7 +44,7 @@ object FmPrinc: TFmPrinc
     Width = 737
     Height = 364
     Margins.Top = 40
-    ActivePage = TsGeral
+    ActivePage = TsLog
     Align = alClient
     TabOrder = 0
     object TsGeral: TTabSheet
@@ -60,6 +60,14 @@ object FmPrinc: TFmPrinc
         Title.Font.Color = clBlack
         Title.Text.Strings = (
           'Vota'#231#227'o')
+        DepthTopAxis.Automatic = False
+        DepthTopAxis.AutomaticMaximum = False
+        DepthTopAxis.AutomaticMinimum = False
+        DepthTopAxis.Maximum = 0.500000000000000000
+        DepthTopAxis.Minimum = -0.500000000000000000
+        LeftAxis.Automatic = False
+        LeftAxis.AutomaticMinimum = False
+        LeftAxis.Minimum = 10.000000000000000000
         Panning.MouseWheel = pmwNone
         View3D = False
         Zoom.Allow = False
@@ -89,10 +97,6 @@ object FmPrinc: TFmPrinc
     object TsSecao: TTabSheet
       Caption = 'Se'#231#227'o'
       ImageIndex = 1
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
       DesignSize = (
         729
         336)
@@ -104,18 +108,17 @@ object FmPrinc: TFmPrinc
         Height = 330
         Margins.Right = 200
         AllowPanning = pmNone
+        Legend.TextStyle = ltsValue
         Title.Font.Color = clBlack
         Title.Text.Strings = (
-          'TChart')
+          'Votos v'#225'lidos por se'#231#227'o')
         Panning.MouseWheel = pmwNone
         View3D = False
         Zoom.Allow = False
         Align = alClient
         TabOrder = 0
-        ExplicitLeft = 168
-        ExplicitTop = 40
-        ExplicitWidth = 400
-        ExplicitHeight = 250
+        ExplicitLeft = 147
+        ExplicitTop = -21
         ColorPaletteIndex = 13
         object Series2: TBarSeries
           Marks.Arrow.Visible = True
@@ -123,39 +126,23 @@ object FmPrinc: TFmPrinc
           Marks.Callout.Arrow.Visible = True
           Marks.Style = smsValue
           Marks.Visible = True
-          Title = 'Sabar'#225
-          Emboss.Color = 8553090
-          Shadow.Color = 8553090
+          Title = 'Cand1'
+          Emboss.Color = 8684676
+          Shadow.Color = 8684676
           XValues.Name = 'X'
           XValues.Order = loAscending
           YValues.Name = 'Bar'
           YValues.Order = loNone
-          Data = {
-            0404000000CBA145B6F3334240FF0700000043616E642E20315A643BDF4FB746
-            40FF0700000043616E642E2032C520B07268EB4740FF070000004272616E636F
-            7305560E2DB2874B40FF050000004E756C6F73}
         end
         object Series3: TBarSeries
           Marks.Arrow.Visible = True
           Marks.Callout.Brush.Color = clBlack
           Marks.Callout.Arrow.Visible = True
+          Marks.Style = smsValue
           Marks.Visible = True
-          Title = 'Centro'
-          Emboss.Color = 8553090
-          Shadow.Color = 8553090
-          XValues.Name = 'X'
-          XValues.Order = loAscending
-          YValues.Name = 'Bar'
-          YValues.Order = loNone
-        end
-        object Series4: TBarSeries
-          Marks.Arrow.Visible = True
-          Marks.Callout.Brush.Color = clBlack
-          Marks.Callout.Arrow.Visible = True
-          Marks.Visible = True
-          Title = 'Nova R'#250'ssia'
-          Emboss.Color = 8553090
-          Shadow.Color = 8553090
+          Title = 'Cand2'
+          Emboss.Color = 8487297
+          Shadow.Color = 8487297
           XValues.Name = 'X'
           XValues.Order = loAscending
           YValues.Name = 'Bar'
@@ -184,13 +171,9 @@ object FmPrinc: TFmPrinc
           Margins.Top = 6
           Margins.Right = 6
           Margins.Bottom = 6
+          OnClickCheck = ClbSecaoClickCheck
           Align = alClient
           ItemHeight = 13
-          Items.Strings = (
-            'IASJOADISJ'
-            'OAIUDJAOIDSJ'
-            'OAISDjIASj'
-            'AISJDPAISJD')
           TabOrder = 0
         end
       end
@@ -198,32 +181,28 @@ object FmPrinc: TFmPrinc
     object TsValidos: TTabSheet
       Caption = 'V'#225'lidos'
       ImageIndex = 2
-      ExplicitLeft = 0
-      ExplicitTop = 0
-      ExplicitWidth = 0
-      ExplicitHeight = 0
-      object Chart2: TChart
+      object ChValidos: TChart
         AlignWithMargins = True
         Left = 3
         Top = 3
         Width = 723
         Height = 330
+        Title.Font.Color = -1
         Title.Text.Strings = (
-          'TChart')
+          'Votos v'#225'lidos')
         View3DOptions.Elevation = 315
         View3DOptions.Orthogonal = False
         View3DOptions.Perspective = 0
         View3DOptions.Rotation = 360
         Align = alClient
         TabOrder = 0
-        ExplicitLeft = 4
         ColorPaletteIndex = 13
         object Series5: TPieSeries
           Marks.Arrow.Visible = True
           Marks.Callout.Brush.Color = clBlack
           Marks.Callout.Arrow.Visible = True
           Marks.Visible = True
-          Title = 'Cand A'
+          Title = 'Votos'
           XValues.Order = loAscending
           YValues.Name = 'Pie'
           YValues.Order = loNone
@@ -245,9 +224,47 @@ object FmPrinc: TFmPrinc
           Frame.Visible = False
           Frame.Width = 4
           OtherSlice.Legend.Visible = False
+          Data = {
+            04020000000000000000707A40FF04000000436172730000000000208E40FF06
+            00000050686F6E6573}
         end
       end
     end
+    object TsLog: TTabSheet
+      Caption = 'Log'
+      ImageIndex = 3
+      DesignSize = (
+        729
+        336)
+      object LvLog: TListView
+        Left = 1
+        Top = 3
+        Width = 725
+        Height = 330
+        Anchors = [akLeft, akTop, akRight, akBottom]
+        Columns = <
+          item
+            Caption = 'Hor'#225'rio do Evento'
+            Width = 150
+          end
+          item
+            Caption = 'Evento'
+            Width = 570
+          end>
+        TabOrder = 0
+        ViewStyle = vsReport
+      end
+    end
+  end
+  object BtnPausa: TButton
+    Left = 665
+    Top = 8
+    Width = 75
+    Height = 25
+    Anchors = [akTop, akRight]
+    Caption = 'Pausar'
+    TabOrder = 1
+    OnClick = BtnPausaClick
   end
   object MainMenu: TMainMenu
     Left = 32
@@ -256,6 +273,9 @@ object FmPrinc: TFmPrinc
       Caption = 'Op'#231#245'es'
       object AcAbrirConfig1: TMenuItem
         Action = AcAbrirConfig
+      end
+      object LimparLog1: TMenuItem
+        Action = AcCleanLog
       end
       object N1: TMenuItem
         Caption = '-'
@@ -273,6 +293,9 @@ object FmPrinc: TFmPrinc
     Top = 336
     object AcAbrirConfig2: TMenuItem
       Action = AcAbrirConfig
+    end
+    object LimparLog2: TMenuItem
+      Action = AcCleanLog
     end
     object Atualizar2: TMenuItem
       Action = AcUpdate
@@ -292,6 +315,10 @@ object FmPrinc: TFmPrinc
     object AcUpdate: TAction
       Caption = 'Atualizar'
       OnExecute = AcUpdateExecute
+    end
+    object AcCleanLog: TAction
+      Caption = 'Limpar Log'
+      OnExecute = AcCleanLogExecute
     end
   end
   object Timer: TTimer

@@ -33,12 +33,10 @@ type
     TsSecao: TTabSheet;
     ChSecao: TChart;
     TsValidos: TTabSheet;
-    Chart2: TChart;
+    ChValidos: TChart;
     PnSecao: TPanel;
     ClbSecao: TCheckListBox;
     Series2: TBarSeries;
-    Series3: TBarSeries;
-    Series4: TBarSeries;
     Series5: TPieSeries;
     ActionList: TActionList;
     AcAbrirConfig: TAction;
@@ -51,18 +49,33 @@ type
     AcUpdate: TAction;
     Atualizar1: TMenuItem;
     Atualizar2: TMenuItem;
+    BtnPausa: TButton;
+    Series3: TBarSeries;
+    TsLog: TTabSheet;
+    LvLog: TListView;
+    AcCleanLog: TAction;
+    LimparLog1: TMenuItem;
+    LimparLog2: TMenuItem;
     procedure AcAbrirConfigExecute(Sender: TObject);
     procedure AcProgExitExecute(Sender: TObject);
     procedure AcUpdateExecute(Sender: TObject);
     procedure FormCreate(Sender: TObject);
     procedure UpdateDataArray;
-    procedure UpdateInterface;
-    function GetLineData(Line: String): Word;
+    procedure UpdateInterface(Init: Boolean);
+    function GetLineData(F,Line: String): Word;
     function GetFileName(Name: String): String;   
     function GetRecordIndex(Rec: TRegSecoes): Word;
+    function GetSecaoIndex(Secao: String): Integer;
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
-    procedure UpdateIniDependant;
-    procedure CalculateSums;
+    procedure CalculateSums(Init: Boolean);
+    procedure UpdateGeral(Series: TChartSeries; C1, C2, B, N: Word);
+    procedure UpdateValidos(Series: TChartSeries; C1, C2: Word);
+    procedure UpdateSecao(Init: Boolean);
+    procedure BtnPausaClick(Sender: TObject);
+    procedure UpdateGauge(Init: Boolean);
+    procedure ClbSecaoClickCheck(Sender: TObject);
+    procedure AddToLog(Messsage: String);
+    procedure AcCleanLogExecute(Sender: TObject);
   private
     { Private declarations }
   public
@@ -73,23 +86,24 @@ var
   FmPrinc: TFmPrinc;
   ArraySecoes: Array of TRegSecoes;
   IniConfig: TIniFile;
-  IniUpdate: Boolean = true;
+  IniUpdate: Boolean = false;
 
 const
-  INI_NAME = 'eleicao.ini';
-  INI_ELEICAO_SECTION = 'Eleicao';
-  INI_ELEICAO_FILEPATH = 'fileDir';
-  INI_ELEICAO_CAND1 = 'cand1';
-  INI_ELEICAO_CAND1COLOR = 'cand1Color';
-  INI_ELEICAO_CAND2 = 'cand2';
-  INI_ELEICAO_CAND2COLOR = 'cand2Color';
-  INI_ELEICAO_BRANCOS = 'brancos';
-  INI_ELEICAO_BRANCOSCOLOR = 'brancosColor';
-  INI_ELEICAO_NULOS = 'nulos';
-  INI_ELEICAO_NULOSCOLOR = 'nulosColor';
-  INI_INTERFACE_SECTION = 'Interface';
-  INI_INTERFACE_POSX = 'posX';
-  INI_INTERFACE_POSY = 'posY';
+  INI_NAME           = 'eleicao.ini';
+  INI_E_SECTION      = 'Eleicao';
+  INI_E_FILEPATH     = 'fileDir';
+  INI_E_CAND1        = 'cand1';
+  INI_E_CAND1COLOR   = 'cand1Color';
+  INI_E_CAND2        = 'cand2';
+  INI_E_CAND2COLOR   = 'cand2Color';
+  INI_E_BRANCOS      = 'brancos';
+  INI_E_BRANCOSCOLOR = 'brancosColor';
+  INI_E_NULOS        = 'nulos';
+  INI_E_NULOSCOLOR   = 'nulosColor';
+  INI_E_QTDSECOES    = 'qtdSecoes';
+  INI_I_SECTION      = 'Interface';
+  INI_I_POSX         = 'posX';
+  INI_I_POSY         = 'posY';
 
 implementation
 
@@ -101,10 +115,18 @@ procedure TFmPrinc.AcAbrirConfigExecute(Sender: TObject);
 var
   FormConfig: TForm;
 begin
-  // Passar a referência do INI para o form de config
+  Timer.Enabled := False;
   FormConfig := TFmConfig.Create(Self);
-
+  Config.IniConfig := IniConfig;
   FormCOnfig.ShowModal;
+  Timer.Enabled := True;
+  IniUpdate := True;
+  AcUpdateExecute(Sender);
+end;
+
+procedure TFmPrinc.AcCleanLogExecute(Sender: TObject);
+begin
+  LvLog.Items.Clear;
 end;
 
 procedure TFmPrinc.AcProgExitExecute(Sender: TObject);
@@ -116,25 +138,45 @@ procedure TFmPrinc.AcUpdateExecute(Sender: TObject);
 begin
   // Atualiza os dados de acordo com os arquivos na pasta
   UpdateDataArray;
-  UpdateInterface;
+  UpdateInterface((Sender is TFmPrinc) OR IniUpdate);
   IniUpdate := False;
 end;
 
-procedure TFmPrinc.CalculateSums;
+procedure TFmPrinc.AddToLog(Messsage: String);
+begin
+  with LvLog.Items.Add do
+  begin
+    Caption := DateTimeToStr(Now());
+    SubItems.Add(Messsage);
+  end;
+end;
+
+procedure TFmPrinc.BtnPausaClick(Sender: TObject);
+begin
+  if Timer.Enabled then
+    begin
+      Timer.Enabled := False;
+      BtnPausa.Caption := 'Resumir';
+    end
+  else
+    begin
+      Timer.Enabled := True;
+      BtnPausa.Caption := 'Pausar';
+    end;
+end;
+
+procedure TFmPrinc.CalculateSums(Init: Boolean);
 var
   I, Cand1, Cand2, Brancos, Nulos: Word;
 begin
+
+  Cand1 := 0;
+  Cand2 := 0;
+  Brancos := 0;
+  Nulos := 0;
+
   if(Length(ArraySecoes) > 0) then
-    with ChGeral.Series[0] do
     begin
-
-      Clear;
-
-      Cand1 := 0;
-      Cand2 := 0;
-      Brancos := 0;
-      Nulos := 0;
-
       for I := 0 to Length(ArraySecoes) - 1 do
         begin
           inc(Cand1, ArraySecoes[i].Cand1);
@@ -142,46 +184,38 @@ begin
           inc(Brancos, ArraySecoes[i].Brancos);
           inc(Nulos, ArraySecoes[i].Nulos);
         end;
-
-      Add(
-        Cand1,
-        IniConfig.ReadString(INI_ELEICAO_SECTION, INI_ELEICAO_CAND1, 'Cand1'),
-        IniConfig.ReadInteger(INI_ELEICAO_SECTION, INI_ELEICAO_CAND1COLOR, clBlack)
-      );
-
-      Add(
-        Cand2,
-        IniConfig.ReadString(INI_ELEICAO_SECTION, INI_ELEICAO_CAND2, 'Cand2'),
-        IniConfig.ReadInteger(INI_ELEICAO_SECTION, INI_ELEICAO_CAND2COLOR, clBlack)
-      );
-
-      Add(
-        Brancos,
-        IniConfig.ReadString(INI_ELEICAO_SECTION, INI_ELEICAO_BRANCOS, 'Brancos'),
-        IniConfig.ReadInteger(INI_ELEICAO_SECTION, INI_ELEICAO_BRANCOSCOLOR, clBlack)
-      );
-
-      Add(
-        Nulos,
-        IniConfig.ReadString(INI_ELEICAO_SECTION, INI_ELEICAO_NULOS, 'Nulos'),
-        IniConfig.ReadInteger(INI_ELEICAO_SECTION, INI_ELEICAO_NULOSCOLOR, clBlack)
-      );
-
     end;
+
+  if Init OR (Length(ArraySecoes) > 0) then
+  begin
+    UpdateGeral(ChGeral.Series[0], Cand1, Cand2, Brancos, Nulos);
+    UpdateValidos(ChValidos.Series[0], Cand1, Cand2);
+  end;
+
+end;
+
+procedure TFmPrinc.ClbSecaoClickCheck(Sender: TObject);
+begin
+  UpdateSecao(False);
 end;
 
 procedure TFmPrinc.FormClose(Sender: TObject; var Action: TCloseAction);
 begin
-  IniConfig.WriteInteger(INI_INTERFACE_SECTION, INI_INTERFACE_POSX, Left);
-  IniConfig.WriteInteger(INI_INTERFACE_SECTION, INI_INTERFACE_POSY, Top);
+  IniConfig.WriteInteger(INI_I_SECTION, INI_I_POSX, Left);
+  IniConfig.WriteInteger(INI_I_SECTION, INI_I_POSY, Top);
   IniConfig.UpdateFile;
 end;
 
 procedure TFmPrinc.FormCreate(Sender: TObject);
+var FormConfig: TFmConfig;
 begin
   IniConfig := TIniFile.Create(GetCurrentDir + '\' + INI_NAME);
-  Top := IniConfig.ReadInteger(INI_INTERFACE_SECTION, INI_INTERFACE_POSY, Top);
-  Left := IniConfig.ReadInteger(INI_INTERFACE_SECTION, INI_INTERFACE_POSX, Left);
+
+  if NOT IniConfig.SectionExists(INI_E_SECTION) then
+    AcAbrirConfigExecute(Sender);
+
+  Top := IniConfig.ReadInteger(INI_I_SECTION, INI_I_POSY, Top);
+  Left := IniConfig.ReadInteger(INI_I_SECTION, INI_I_POSX, Left);
   AcUpdateExecute(Sender);
 end;
 
@@ -200,12 +234,12 @@ begin
     EInvalidFile.Create('');
 end;
 
-function TFmPrinc.GetLineData(Line: String): Word;
+function TFmPrinc.GetLineData(F,Line: String): Word;
 var
   Regex: TRegEx;
   Match: TMatch;
 begin
-  Regex := TRegEx.Create('^.*=(\d+).*$');
+  Regex := TRegEx.Create('^' + F + '\s*=(\d+).*$');
   Match := Regex.Match(Line);
 
   if Match.Success then
@@ -229,20 +263,69 @@ begin
   Result := I;
 end;
 
+function TFmPrinc.GetSecaoIndex(Secao: String): Integer;
+var
+  I: Integer;
+begin
+  i := 0;
+  while (i < Length(ArraySecoes)) AND (ArraySecoes[i].Nome <> Secao) do
+    inc(i);
+
+  if(i = Length(ArraySecoes)) then
+    Result := -1
+  else
+    Result := i;
+end;
+
+procedure TFmPrinc.UpdateGeral(Series: TChartSeries; C1, C2, B, N: Word);
+begin
+  with Series do
+  begin
+    Clear;
+
+    Add(
+      C1,
+      IniConfig.ReadString(INI_E_SECTION, INI_E_CAND1, 'Cand1'),
+      TColor(IniConfig.ReadInteger(INI_E_SECTION, INI_E_CAND1COLOR, clBlack))
+    );
+
+    Add(
+      C2,
+      IniConfig.ReadString(INI_E_SECTION, INI_E_CAND2, 'Cand2'),
+      TColor(IniConfig.ReadInteger(INI_E_SECTION, INI_E_CAND2COLOR, clWhite))
+    );
+
+    Add(
+      B,
+      IniConfig.ReadString(INI_E_SECTION, INI_E_BRANCOS, 'Brancos'),
+      TColor(IniConfig.ReadInteger(INI_E_SECTION, INI_E_BRANCOSCOLOR, clBlack))
+    );
+
+    Add(
+      N,
+      IniConfig.ReadString(INI_E_SECTION, INI_E_NULOS, 'Nulos'),
+      TColor(IniConfig.ReadInteger(INI_E_SECTION, INI_E_NULOSCOLOR, clWhite))
+    );
+
+  end;
+end;
+
 procedure TFmPrinc.UpdateDataArray;
 var
   FileDir, FilePath, Line: String;
   FilePointer: TextFile;
   NewRecord: TRegSecoes;
   Dir: TSearchRec;
+  I: Integer;
+  Found: Boolean;
 begin
   // Varre o diretório definido no INI e pega o primeiro arquivo novo
   // para atualizar o array de dados
   if (IniConfig is TIniFile) then
   begin
     FileDir := IniConfig.ReadString(
-      INI_ELEICAO_SECTION, 
-      INI_ELEICAO_FILEPATH,
+      INI_E_SECTION, 
+      INI_E_FILEPATH,
       GetCurrentDir
     );
     
@@ -253,49 +336,113 @@ begin
       AssignFile(FilePointer, FileDir + '\' + Dir.Name);
       Reset(FilePointer);
 
-      NewRecord.Nome := GetFileName(Dir.Name);
+      NewRecord.Nome := LowerCase(GetFileName(Dir.Name));
 
       Readln(FilePointer, Line); // Linha 1
-      NewRecord.Cand1 := GetLineData(Line);
+      NewRecord.Cand1 := GetLineData('votos 1', Line);
 
       Readln(FilePointer, Line); // Linha 2
-      NewRecord.Cand2 := GetLineData(Line);
+      NewRecord.Cand2 := GetLineData('votos 2', Line);
 
       Readln(FilePointer, Line); // Linha 3
-      NewRecord.Brancos := GetLineData(Line);
+      NewRecord.Brancos := GetLineData('brancos', Line);
 
       Readln(FilePointer, Line); // Linha 4
-      NewRecord.Nulos := GetLineData(Line);
+      NewRecord.Nulos := GetLineData('nulos', Line);
 
       ArraySecoes[GetRecordIndex(NewRecord)] := NewRecord;
 
       CloseFile(FilePointer);
-      DeleteFile(FileDir + '\' + Dir.Name);    
+      DeleteFile(FileDir + '\' + Dir.Name);
+
+      if(ClbSecao.Items.IndexOf(NewRecord.Nome) = -1) then
+        ClbSecao.Items.Add(NewRecord.Nome);
+
+      AddToLog('Arquivo: ' + Dir.Name + ' lido com sucesso');
     except
       // Criar logger
-      ShowMessage('Arquivo inválido');
+      AddToLog('Erro ao ler o arquivo:' + Dir.Name);
       CloseFile(FilePointer);
       DeleteFile(FileDir + '\' + Dir.Name);    
     end;
   end
   else
-    ShowMessage('Erro na criação do arquivo ini');
+    ShowMessage('Erro na abertura do arquivo ini');
 
 end;
 
-procedure TFmPrinc.UpdateIniDependant;
+procedure TFmPrinc.UpdateGauge(Init: Boolean);
 begin
-  // Atualiza as informações que são dependentes do arquivo ini
+  if Init then
+    Gauge.MaxValue := IniConfig.ReadInteger(INI_E_SECTION, INI_E_QTDSECOES, 100);
+
+  Gauge.Progress := Length(ArraySecoes);
 end;
 
-procedure TFmPrinc.UpdateInterface;
+procedure TFmPrinc.UpdateInterface(Init: Boolean);
 begin
-  // Pega os dados no array de dados e atualiza a interface, juntamente com os
-  // Dados definidos no INI para apresentação
-  if IniUpdate then
-    UpdateIniDependant;
+  CalculateSums(Init);
+  UpdateSecao(Init);
+  UpdateGauge(Init);
+end;
 
-  CalculateSums;
+procedure TFmPrinc.UpdateSecao(Init: Boolean);
+var
+  i: integer;
+  Atual: TRegSecoes;
+begin
+  with ChSecao do
+  begin
+    Series[0].Clear;
+    Series[1].Clear;
+
+    if Init then
+    begin
+      Series[0].Title := IniConfig.ReadString(INI_E_SECTION, INI_E_CAND1, 'cand1');
+      Series[1].Title := IniConfig.ReadString(INI_E_SECTION, INI_E_CAND2, 'cand2');
+    end;
+
+    with ClbSecao do
+      for I := 0 to GetCount - 1 do
+        if(Checked[i]) then
+          begin
+            Atual := ArraySecoes[GetSecaoIndex(ClbSecao.Items[i])];
+
+            Series[0].Add(
+              Atual.Cand1,
+              Atual.Nome,
+              IniConfig.ReadInteger(INI_E_SECTION, INI_E_CAND1COLOR, clRed)
+            );
+
+            Series[1].Add(
+              Atual.Cand2,
+              Atual.Nome,
+              IniConfig.ReadInteger(INI_E_SECTION, INI_E_CAND2COLOR, clBlue)
+            );
+          end;
+  end;
+
+end;
+
+procedure TFmPrinc.UpdateValidos(Series: TChartSeries; C1, C2: Word);
+begin
+  with Series do
+  begin
+    Clear;
+
+    Add(
+      C1,
+      IniConfig.ReadString(INI_E_SECTION, INI_E_CAND1, 'Cand1'),
+      IniConfig.ReadInteger(INI_E_SECTION, INI_E_CAND1COLOR, clBlack)
+    );
+
+    Add(
+      C2,
+      IniConfig.ReadString(INI_E_SECTION, INI_E_CAND2, 'Cand2'),
+      IniConfig.ReadInteger(INI_E_SECTION, INI_E_CAND2COLOR, clWhite)
+    );
+  end;
+
 end;
 
 end.
